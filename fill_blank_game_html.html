@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<title>بازی جای خالی کودکانه فانتزی</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@700&display=swap');
+  body {
+    font-family: 'Baloo 2', cursive;
+    background: url('https://images.unsplash.com/photo-1571607387770-051beeb95f1b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&q=80&w=1080') no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    padding: 30px;
+    text-align: center;
+    color: #333;
+    overflow-x: hidden;
+  }
+  h1 {
+    color: #ff4f96;
+    font-size: 36px;
+    margin-bottom: 20px;
+    text-shadow: 3px 3px #fff;
+  }
+  .word {
+    font-size: 28px;
+    margin: 10px;
+    display: inline-block;
+    padding: 10px 15px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 2px 2px 12px rgba(0,0,0,0.2);
+    position: relative;
+    transition: transform 0.3s, background 0.3s;
+  }
+  .option-btn {
+    background: linear-gradient(90deg, #ffb6c1, #ff69b4);
+    border: none;
+    margin: 5px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 22px;
+    color: white;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+    transition: transform 0.2s;
+  }
+  .option-btn:hover {
+    background: linear-gradient(90deg, #ff69b4, #ff1493);
+    transform: scale(1.1);
+  }
+  canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1000;
+  }
+</style>
+</head>
+<body>
+<h1>🎈 بازی جای خالی کودکانه فانتزی 🎈</h1>
+<div id="game"></div>
+<div id="letters" style="margin-top:20px;"></div>
+<canvas id="confettiCanvas"></canvas>
+<script>
+  const bgMusic = new Audio('https://dl2.hitseda.com/dl1/kodkane/06.memories.mp3');
+  bgMusic.loop = true;
+
+  document.addEventListener('click', () => {
+    if(bgMusic.paused){
+      bgMusic.play();
+    }
+  }, { once: true });
+
+  const words = [
+    {full:"چراغانی", blank:"چر_غانی", missing:"ا", solved:false},
+    {full:"استراحت", blank:"استراح_", missing:"ت", solved:false},
+    {full:"خطرناک", blank:"خطرنا_", missing:"ک", solved:false},
+    {full:"نصیحت", blank:"نصیح_", missing:"ت", solved:false},
+    {full:"صاحب", blank:"صاح_", missing:"ب", solved:false},
+    {full:"بی حوصله", blank:"بی حوصل_", missing:"ه", solved:false},
+    {full:"خوردن", blank:"خور_ن", missing:"د", solved:false},
+    {full:"منتظر", blank:"منتظ_", missing:"ر", solved:false},
+    {full:"مثلا", blank:"مثل_", missing:"ا", solved:false},
+    {full:"سرود", blank:"سرو_", missing:"د", solved:false},
+    {full:"مواظبت", blank:"مواظب_", missing:"ت", solved:false},
+    {full:"وانگهی", blank:"وانگه_", missing:"ی", solved:false}
+  ];
+
+  let letters = words.flatMap(w => Array(w.missing.length).fill(w.missing));
+  letters.sort(() => Math.random() - 0.5);
+
+  const container = document.getElementById("game");
+  words.forEach((w,index) => {
+    const span = document.createElement('span');
+    span.className = 'word';
+    span.id = 'word'+index;
+    span.innerText = w.blank;
+    container.appendChild(span);
+  });
+
+  const lettersDiv = document.getElementById('letters');
+  function renderLetters(){
+    lettersDiv.innerHTML = letters.map((l,i) => `<button class='option-btn' onclick='choose("${l}", ${i}, this)'>${l}</button>`).join('');
+  }
+  renderLetters();
+
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  let confettiParticles = [];
+
+  function Confetti(x, y, color){
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.size = Math.random() * 6 + 4;
+    this.speedX = (Math.random()-0.5) * 4;
+    this.speedY = Math.random() * -5 -2;
+    this.opacity = 1;
+  }
+
+  function updateConfetti(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    confettiParticles.forEach((p,i) => {
+      p.x += p.speedX;
+      p.y += p.speedY;
+      p.speedY += 0.1;
+      p.opacity -= 0.01;
+      ctx.fillStyle = `rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity})`;
+      ctx.fillRect(p.x,p.y,p.size,p.size);
+      if(p.opacity<=0) confettiParticles.splice(i,1);
+    });
+    requestAnimationFrame(updateConfetti);
+  }
+
+  updateConfetti();
+
+  function spawnConfetti(){
+    for(let i=0;i<100;i++){
+      confettiParticles.push(new Confetti(Math.random()*canvas.width, canvas.height, {r:Math.random()*255,g:Math.random()*255,b:Math.random()*255}));
+    }
+  }
+
+  function choose(letter, index, btn){
+    let currentIndex = words.findIndex(w => !w.solved);
+    if(currentIndex === -1 || words[currentIndex].missing !== letter && words[currentIndex].blank.includes('_')){
+      btn.style.background = '#ff6961';
+      return;
+    }
+    const wordEl = document.getElementById('word'+currentIndex);
+    wordEl.innerText = words[currentIndex].full;
+    words[currentIndex].solved = true;
+
+    wordEl.style.background = 'linear-gradient(90deg, #ffe066, #ff6b81)';
+    wordEl.style.transform = 'scale(1.2)';
+    setTimeout(() => { wordEl.style.background='rgba(255, 255, 255, 0.7)'; wordEl.style.transform='scale(1)'; }, 600);
+    playSound();
+    spawnConfetti();
+
+    letters.splice(index,1);
+    btn.remove();
+  }
+
+  function playSound(){
+    const sound = new Audio('https://www.soundjay.com/button/sounds/button-10.mp3');
+    sound.play();
+  }
+</script>
+</body>
+</html>
